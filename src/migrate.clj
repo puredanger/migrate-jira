@@ -64,7 +64,7 @@
 
 (defn transform-date
   [date]
-  (str (subs date 0 10) "T" (subs date 11) "+0000"))
+  (str (subs date 0 10) "T" (subs date 11) "-0600"))
 
 (defn transform-versions
   [data project-id]
