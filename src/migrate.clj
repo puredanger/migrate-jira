@@ -111,7 +111,9 @@
   [data issue-id]
   (->> (get data "Label")
     (filter #(= issue-id (get % "issue")))
-    (map #(get % "label"))))
+    (map #(get % "label"))
+    (remove #{"enhancement" "bug" "test" "patch"})
+    seq))
 
 (defn find-user
   [name active]
