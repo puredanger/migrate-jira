@@ -260,7 +260,7 @@
   (->> (get data "Issue")
     (filter #(= project-id (get % "project")))
     (map #(let [{:strs [id key priority description status reporter type
-                        resolution created updated summary assignee]} %
+                        resolution created updated summary assignee environment]} %
                 affectedVs (linked-versions data id)
                 fixVs (fixed-versions data id)
                 labels (find-labels data id)
@@ -283,6 +283,7 @@
                 "updated" (transform-date updated)
                 "summary" summary)
               description (assoc "description" description)
+              environment (assoc "environment" environment)
               (seq labels) (assoc "labels" labels)
               resolution (assoc "resolution" (resolution-codes resolution))
               assignee (assoc "assignee" (find-user assignee active))
