@@ -168,7 +168,7 @@
 (defn custom-fields
   [data issue-id]
   (->> (get data "CustomFieldValue")
-    (filter #(and (= issue-id (get % "issue")) (= "comment" (get % "type"))))
+    (filter #(= issue-id (get % "issue")))
     (map #(let [{:strs [customfield stringvalue]} %]
             (case customfield
               "10000" {"fieldName" "Patch"
