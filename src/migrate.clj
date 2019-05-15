@@ -194,18 +194,6 @@
              "created" (transform-date created)}))
     vec))
 
-;; "Attachment" - newvalue id  translation
-;; "Component" - newvalue id translation
-;; "Fix Version"
-;; "Project"
-;; "Version"
-;; "issuetype"
-;; "priority"
-;; "resolution"
-;; "status"
-;; "Approval"
-;; "Patch"
-
 (defn history-items
   [data group-id]
   (->> (get data "ChangeItem")
