@@ -188,9 +188,10 @@
   [data active issue-id]
   (->> (get data "Action")
     (filter #(= issue-id (get % "issue")))
-    (map #(let [{:strs [author created body]} %]
-            {"body" body
-             "author" (find-user author active)
+    (map #(let [{:strs [author created body]} %
+                user (find-user author active)]
+            {"body" (if (= "import" user) (str "_Comment made by: " author "_\n\n" body) body )
+             "author" user
              "created" (transform-date created)}))
     vec))
 
