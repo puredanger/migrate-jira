@@ -291,69 +291,34 @@
   "Created or commented in last 4 years + anyone that has edited a ticket."
   [data]
   (let [;; created
-        creators (->> (get data "Issue")
-                   (filter #(contains? #{"2019" "2018" "2017" "2016" "2015"
-                                         }
-                              (subs (get % "created") 0 4)))
-                   (map #(get % "reporter"))
-                   set)
-        ;; commented
-        commenters (->> (get data "Action")
-                     (filter #(contains? #{"2019" "2018" "2017" "2016" "2015"
-                                           }
-                                (subs (get % "updated") 0 4)))
-                     (map #(get % "updateauthor"))
-                     set)
-        ;; edited
+        ;creators (->> (get data "Issue")
+        ;           (filter #(contains? #{"2019" "2018" "2017" "2016" "2015"}
+        ;                      (subs (get % "created") 0 4)))
+        ;           (map #(get % "reporter"))
+        ;           set)
+        ;;; commented
+        ;commenters (->> (get data "Action")
+        ;             (filter #(contains? #{"2019" ;; "2018" "2017" "2016" "2015"
+        ;                                   }
+        ;                        (subs (get % "updated") 0 4)))
+        ;             (map #(get % "updateauthor"))
+        ;             set)
+        ;;; edited
         editors (->> (get data "ChangeGroup")
-                  (filter #(contains? #{ "2019" "2018" "2017" "2016" "2015" "2014" "2013" "2012" "2011" "2010"}
-                             (subs (get % "created") 0 4)))
                   (map #(get % "author"))
                   set)]
-    (println "creators" (count creators) (contains? creators "cemerick"))
-    (println "commenters" (count commenters) (contains? commenters "cemerick"))
-    (println "editors" (count editors) (contains? editors "cemerick"))
-    (into editors (into creators commenters))))
-
-(comment
-  (count (get xs "ChangeGroup"))
-  (count
-    (->> (get xs "ChangeGroup")
-      (map #(get % "author"))
-      set))
-
-  (->> (get xs "ChangeGroup")
-    (group-by #(subs (get % "created") 0 4))
-    (reduce (fn [acc [year groups]] (assoc acc year (->> groups (map #(get % "author")) distinct count))) {})
-    (sort-by key)
-    clojure.pprint/pprint)
-
-  (count (active-users xs))
-
-  (->> (get xs "ChangeGroup")
-    (filter #(= "cemerick" (get % "author")))
-    (sort-by #(get % "created")))
-
-  (->> (get xs "Issue")
-    (filter #(= "cemerick" (get % "reporter")))
-    (sort-by #(get % "created")))
-  )
+    editors))
 
 (defn export-users
   [data active]
   (println "Exporting users")
   (let [users {"users"
-               (cons
-                 {"name" "import"
-                  "groups" ["jira-users"]
+               (for [user-data (->> (get data "User") (filter #(contains? active (get % "userName"))))]
+                 {"name" (get user-data "userName")
+                  "groups" ["jira-users" "jira-developers"]
                   "active" true
-                  "fullname" "jira import"}
-                 (for [user-data (->> (get data "User") (filter #(contains? active (get % "userName"))))]
-                   {"name" (get user-data "userName")
-                    "groups" ["jira-users" "jira-developers"]
-                    "active" true
-                    "email" (get user-data "emailAddress")
-                    "fullname" (get user-data "displayName")}))}
+                  "email" (get user-data "emailAddress")
+                  "fullname" (get user-data "displayName")})}
         j (with-out-str (json/pprint users))]
     (spit "users.json" j)))
 
@@ -380,7 +345,7 @@
   [f]
   (let [data (load-xml f)
         active (active-users data)]
-    ;;(export-users data active)
+    (export-users data active)
     (export-projects data active)))
 
 (comment
