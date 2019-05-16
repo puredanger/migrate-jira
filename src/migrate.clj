@@ -322,24 +322,28 @@
         j (with-out-str (json/pprint users))]
     (spit "users.json" j)))
 
+(defn export-project
+  [data active key]
+  (let [{:strs [id name description]} (->> (get data "Project") (filter #(= key (get % "key"))) first)
+        _ (println "Exporting" key)
+        versions (transform-versions data id)
+        components (transform-components data id)
+        issues (transform-issues data id key active)
+        p {"projects"
+           [(cond-> {"name" name
+                     "key" key
+                     "type" "software"}
+              description (assoc "description" description)
+              (seq versions) (assoc "versions" versions)
+              (seq components) (assoc "components" components)
+              (seq issues) (assoc "issues" issues))]}
+        j (with-out-str (json/pprint p))]
+    (spit (str "project-" key ".json") j)))
+
 (defn export-projects
   [data active]
-  (for [project-data (get data "Project")]
-    (let [{:strs [id name key description]} project-data
-          _ (println "Exporting" key)
-          versions (transform-versions data id)
-          components (transform-components data id)
-          issues (transform-issues data id key active)
-          p {"projects"
-             [(cond-> {"name" name
-                       "key" key
-                       "type" "software"}
-                description (assoc "description" description)
-                (seq versions) (assoc "versions" versions)
-                (seq components) (assoc "components" components)
-                (seq issues) (assoc "issues" issues))]}
-          j (with-out-str (json/pprint p))]
-      (spit (str "project-" key ".json") j))))
+  (doseq [id (->> (get data "Project") (map #(get % "key")))]
+    (export-project data active id)))
 
 (defn export-all
   [f]
@@ -350,6 +354,8 @@
 
 (comment
   (def xs (load-xml "../jirabackup20190423/entities.xml"))
+
+  (export-project xs (active-users xs) "ALGOM")
   (first (get xs "Project"))
   (sort (keys xs))
   (first (get xs "Issue"))
