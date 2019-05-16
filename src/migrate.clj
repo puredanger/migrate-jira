@@ -267,6 +267,7 @@
                 "priority" (priority-codes priority)
                 "status" (status-codes status)
                 "reporter" (find-user reporter active)
+                "creator" (find-user reporter active)
                 "issueType" (issue-type-codes type)
                 "created" (transform-date created)
                 "updated" (transform-date updated)
