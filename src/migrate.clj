@@ -311,15 +311,23 @@
 
 (defn export-users
   [data active]
-  (println "Exporting users")
-  (let [users {"users"
-               (for [user-data (->> (get data "User") (filter #(contains? active (get % "userName"))))]
-                 {"name" (get user-data "userName")
-                  "groups" ["jira-users" "jira-developers"]
-                  "active" true
-                  "email" (get user-data "emailAddress")
-                  "fullname" (get user-data "displayName")})}
-        j (with-out-str (json/pprint users))]
+  (println "Active users" (count active))
+  (let [all-users (get data "User")
+        _ (println "All users" (count all-users))
+        users (for [name active]
+                (when-let [{:strs [userName emailAddress displayName]}
+                           (->> all-users
+                             (filter #(= name (get % "userName")))
+                             (sort-by #(get % "updatedDate"))
+                             last)]
+                  {"name" userName
+                   "groups" ["jira-users" "jira-developers"]
+                   "active" true
+                   "email" emailAddress
+                   "fullname" displayName}))
+        users (remove nil? users)
+        _ (println "Imported users" (count users))
+        j (with-out-str (json/pprint {"users" users}))]
     (spit "users.json" j)))
 
 (defn export-project
@@ -353,7 +361,10 @@
     (export-projects data active)))
 
 (comment
-  (def xs (load-xml "../jirabackup20190423/entities.xml"))
+  (def xs (load-xml "../jirabackup20190516/entities.xml"))
+  (export-users xs (active-users xs))
+
+  (filter #(= "alexmiller" (get % "userName")) (get xs "User"))
 
   (export-project xs (active-users xs) "ALGOM")
   (first (get xs "Project"))
@@ -395,7 +406,7 @@
 
   (->> (get xs "NodeAssociation") (map #(get % "associationType")) distinct sort)
 
-  (export-all "../jirabackup20190423/entities.xml")
+  (export-all "../jirabackup20190516/entities.xml")
 
   )
 
