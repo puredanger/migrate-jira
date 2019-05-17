@@ -115,12 +115,6 @@
     (remove #{"enhancement" "bug" "test" "patch"})
     seq))
 
-(defn find-user
-  [name active]
-  (if (contains? active name)
-    name
-    "import"))
-
 (defn linked-versions
   [data issue-id]
   (let [versions (group-by #(get % "id") (get data "Version"))]
@@ -158,7 +152,7 @@
     (map #(let [{:strs [id issue filename created author]} %]
             (hash-map
               "name" filename
-              "attacher" (find-user author active)
+              "attacher" author
               "created" (transform-date created)
               "uri" (str "http://cdn.cognitect.com/jira/attachments/" pkey "/" ikey "/" id)
               ;;"description" nil
@@ -188,10 +182,9 @@
   [data active issue-id]
   (->> (get data "Action")
     (filter #(= issue-id (get % "issue")))
-    (map #(let [{:strs [author created body]} %
-                user (find-user author active)]
-            {"body" (if (= "import" user) (str "_Comment made by: " author "_\n\n" body) body )
-             "author" user
+    (map #(let [{:strs [author created body]} %]
+            {"body" (if (contains? active author) body (str "_Comment made by: " author "_\n\n" body))
+             "author" author
              "created" (transform-date created)}))
     vec))
 
@@ -214,17 +207,12 @@
     (remove nil?)
     vec))
 
-(comment
-  (def items (get xs "ChangeItem"))
-  (pprint/print-table (take 5 (filter #(= "Patch" (get % "field")) items)))
-  )
-
 (defn history
   [data active issue-id]
   (->> (get data "ChangeGroup")
     (filter #(= issue-id (get % "issue")))
     (map #(let [{:strs [id author created]} %]
-            {"author" (find-user author active)
+            {"author" author
              "created" (transform-date created)
              "items" (history-items data id)}))))
 
@@ -232,7 +220,8 @@
   [data active issue-id]
   (->> (get data "UserAssociation")
     (filter #(and (= "VoteIssue" (get % "associationType")) (= issue-id (get % "sinkNodeId"))))
-    (map #(find-user (get % "sourceName") active))
+    (map #(get % "sourceName"))
+    (filter #(contains? active %))
     distinct
     vec))
 
@@ -240,7 +229,8 @@
   [data active issue-id]
   (->> (get data "UserAssociation")
     (filter #(and (= "WatchIssue" (get % "associationType")) (= issue-id (get % "sinkNodeId"))))
-    (map #(find-user (get % "sourceName") active))
+    (map #(get % "sourceName"))
+    (filter #(contains? active %))
     distinct
     vec))
 
@@ -266,8 +256,7 @@
                 "key" key
                 "priority" (priority-codes priority)
                 "status" (status-codes status)
-                "reporter" (find-user reporter active)
-                "creator" (find-user reporter active)
+                "reporter" reporter
                 "issueType" (issue-type-codes type)
                 "created" (transform-date created)
                 "updated" (transform-date updated)
@@ -276,7 +265,7 @@
               environment (assoc "environment" environment)
               (seq labels) (assoc "labels" labels)
               resolution (assoc "resolution" (resolution-codes resolution))
-              assignee (assoc "assignee" (find-user assignee active))
+              assignee (assoc "assignee" assignee)
               (seq affectedVs) (assoc "affectedVersions" affectedVs)
               (seq fixVs) (assoc "fixedVersions" fixVs)
               (seq components) (assoc "components" components)
@@ -286,6 +275,9 @@
               (seq watchers) (assoc "watchers" watchers)
               (seq voters) (assoc "voters" voters)
               (seq history) (assoc "history" history))))))
+
+;; user data is bad, must exclude
+(def excludes #{"monorok","gar3thjon3s"})
 
 (defn active-users
   "Created or commented in last 4 years + anyone that has edited a ticket."
@@ -306,6 +298,7 @@
         ;;; edited
         editors (->> (get data "ChangeGroup")
                   (map #(get % "author"))
+                  (remove #(excludes %))
                   set)]
     editors))
 
@@ -366,7 +359,7 @@
 
   (filter #(= "alexmiller" (get % "userName")) (get xs "User"))
 
-  (export-project xs (active-users xs) "ALGOM")
+  (export-project xs (active-users xs) "CCACHE")
   (first (get xs "Project"))
   (sort (keys xs))
   (first (get xs "Issue"))
