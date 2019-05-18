@@ -145,18 +145,28 @@
       (map #(get (first (get versions %)) "name"))
       vec)))
 
+(defn uri-exists?
+  [uri]
+  (try
+    (with-open [s (.openStream (java.net.URL. uri))]
+      true)
+    (catch Throwable _ false)))
+
 (defn attachments
   [data active pkey ikey issue-id]
   (->> (get data "FileAttachment")
     (filter #(= issue-id (get % "issue")))
-    (map #(let [{:strs [id issue filename created author]} %]
+    (map #(let [{:strs [id issue filename created author]} %
+                uri1 (str "http://cdn.cognitect.com/jira/attachments/" pkey "/" ikey "/" id)
+                uri2 (str "http://cdn.cognitect.com/jira/attachments/" pkey "/" ikey "/" id "_" filename)]
             (hash-map
               "name" filename
               "attacher" author
               "created" (transform-date created)
-              "uri" (str "http://cdn.cognitect.com/jira/attachments/" pkey "/" ikey "/" id)
-              ;;"description" nil
-              )))
+              "uri" (cond
+                      (uri-exists? uri1) uri1
+                      (uri-exists? uri2) uri2
+                      :else uri1)))) ;; will be a bad attachment
     vec))
 
 (defn custom-fields
@@ -277,7 +287,7 @@
               (seq history) (assoc "history" history))))))
 
 ;; user data is bad, must exclude
-(def excludes #{"monorok","gar3thjon3s"})
+(def excludes #{"monorok","gar3thjon3s","technomancy"})
 
 (defn active-users
   "Created or commented in last 4 years + anyone that has edited a ticket."
