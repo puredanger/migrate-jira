@@ -167,6 +167,19 @@
                       (uri-exists? uri1) uri1
                       (uri-exists? uri2) uri2
                       :else uri1)))) ;; will be a bad attachment
+    (reduce (fn [m {:strs [name] :as a}]
+              (if (contains? m name)
+                (loop [i 1]
+                  (let [index (str/last-index-of name ".")
+                        name' (if index
+                                (str (subs name 0 index) "__" i (subs name index))
+                                (str name "__" i))]
+                    (if (contains? m name')
+                      (recur (inc i))
+                      (assoc m name' (assoc a "name" name')))))
+                (assoc m name a)))
+      {})
+    vals
     vec))
 
 (defn custom-fields
@@ -369,7 +382,13 @@
 
   (filter #(= "alexmiller" (get % "userName")) (get xs "User"))
 
-  (export-project xs (active-users xs) "CCACHE")
+  (export-project xs (active-users xs) "CLJ")
+
+  (->> (get xs "Issue") (filter #(= "CLJS-2166" (get % "key"))))
+  ;; id = 23399
+  (->> (get xs "FileAttachment") (filter #(= "23399" (get % "issue"))))
+  (attachments xs (active-users xs) "CLJS" "CLJS-2166" "21677")
+
   (first (get xs "Project"))
   (sort (keys xs))
   (first (get xs "Issue"))
